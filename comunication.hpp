@@ -1,3 +1,4 @@
+//batata
 #ifndef MSGQUEUEMOCK
 #define MSGQUEUEMOCK
 #include <sys/types.h>
