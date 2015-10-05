@@ -1,34 +1,56 @@
 #include "comunication.hpp"
+#include <iostream>
 
-
-template<size_t Size> MessageQueue<Size>::MessageQueue(QueueType type_arg,int key,int flags){
+MessageQueue::MessageQueue(QueueType type_arg,int key,int flags){
     qKey            =   key;
     qFlags          =   flags;
     type            =   type_arg;
+    Owner           =   false;
+    Buffer.mtype    =   1;
+    Created         =   false;
     //Solicita fila de mensagens com key e flags definidas
-    //MessageQueueId  = msgget(qKey, qFlags);
+    if (qFlags|IPC_CREAT){
+        Owner = true;
+    }
+    MessageQueueId  = msgget(qKey, qFlags);
     if (MessageQueueId < 0){
         //Falha
+        std::cout << MessageQueueId << "]\n";
         Working = false;
     }else{
+        Created = true;
         Working = true;
     }
 
 }
+MessageQueue::~MessageQueue(){}
+
+void MessageQueue::Close(){
+    if (Created){
+        if (msgctl(MessageQueueId, IPC_RMID, NULL) == 0){
+            Created = false;
+        }else{
+            std::cout << "[Error] Cannot delete!\n";
+        }
+    }
+}
+
 //Polimorfismo
-template<size_t Size> bool MessageQueue<Size>::Send(std::string str){
+bool MessageQueue::Send(std::string str){
     const char *c = str.c_str();
     return Send(c,str.size()+1);
 }
-template<size_t Size> bool MessageQueue<Size>::Send(const char *message,int size){
+bool MessageQueue::Send(const char *message,int size){
     return Send((char*)message,size);
 }
 
-template<size_t Size> bool MessageQueue<Size>::Send(char *message,int size){
+bool MessageQueue::Send(char *message,int size){
     if (!isSender()){
+        std::cout << "[Error] i am not sender!\n";
         return false;
     }
-    if (size > Size){
+    if (size > MSG_SIZE){
+        std::cout << "[Error] message too big\n";
         return false;
     }
     //Copy
@@ -41,32 +63,39 @@ template<size_t Size> bool MessageQueue<Size>::Send(char *message,int size){
     return true;
 }
 
-template<size_t Size> std::string MessageQueue<Size>::Receive(bool wait){
-    std::string msg = "[null]";
+std::string MessageQueue::Receive(bool wait){
+    std::string msg = "";
     Receive(msg,wait);
     return msg;
 }
 
-template<size_t Size> bool MessageQueue<Size>::Receive(std::string &str,bool wait){
-    char *message[Size];
+bool MessageQueue::Receive(std::string &str,bool wait){
+    char message[MSG_SIZE];
     if (!Receive(message,wait)){
         return false;
     }
-    str = message;
+    std::string data = message;
+    str = data;
     return true;
 }
 
-template<size_t Size> bool MessageQueue<Size>::Receive(char *message,bool wait){
+bool MessageQueue::Receive(char *message,bool wait){
+    if (!isWorking()){
+        std::cout << "[Error] not working!\n";
+        return false;
+    }
     if (!isReceiver()){
+        std::cout << "[Error] i am not receiver! ["<<type<<"]\n";
         return false;
     }
     int readSize=-1;
-    if (readSize = msgrcv(MessageQueueId, &Buffer, Size, 1, (wait ? 0 : IPC_NOWAIT) ) < 0){
+
+    if (readSize = msgrcv(MessageQueueId, &Buffer, MSG_SIZE, 1,(wait ? 0 : IPC_NOWAIT) ) < 0){
         return false;
     }
     LastReadSize = readSize;
-    for (int i=0;i<readSize;i++){
-        Buffer.mtext[i] = message[i];
+    for (int i=0;i<MSG_SIZE+1;i++){
+        message[i] = Buffer.mtext[i];
     }
     return true;
 }

@@ -8,16 +8,22 @@
 #include <stdlib.h>
 #include <string>
 
+#define MSG_SIZE 128
+
+
 enum QueueType{
     QUEUE_SEND=0b001,
     QUEUE_RECV=0b010,
     QUEUE_BOTH=0b011,
 };
 
-template <size_t Size> class MessageQueue{
+class MessageQueue{
     public:
-        MessageQueue<Size>(QueueType type,int key,int flags);
+        MessageQueue(QueueType type,int key,int flags);
+        ~MessageQueue();
+        void Close();
         bool isWorking()    {return Working;};
+        bool isOwner()    {return Owner;};
         /*
             Aqui ele faz a operação AND binaria em type e a constante
             Se type for 1 e ele quiser verificar se é do tipo send:
@@ -28,8 +34,8 @@ template <size_t Size> class MessageQueue{
             e se for booth
             0011 and 0001 = 0001 (true)
         */
-        bool isSender()     {return isWorking() && (type&QUEUE_SEND);};
-        bool isReceiver()   {return isWorking() && (type&QUEUE_RECV);};
+        bool isSender()     {return isWorking() && (type | QUEUE_SEND);};
+        bool isReceiver()   {return isWorking() && (type | QUEUE_RECV);};
 
         bool Send(const char *message,int size);
         bool Send(char *message,int size);
@@ -38,18 +44,18 @@ template <size_t Size> class MessageQueue{
         bool Receive(char *message,bool wait=true);
         bool Receive(std::string &str,bool wait=true);
         std::string Receive(bool wait=true);
-        int GetReadSize(){return LastReadSize};
+        int GetReadSize(){return LastReadSize;};
 
     private:
         int MessageQueueId;
         int qKey;
         int qFlags;
-        bool type;
-        bool Working;
+        QueueType type; // < P***
+        bool Working,Owner,Created;
         int LastReadSize;
         struct message_buf{
             long    mtype;
-            char    mtext[Size];
+            char    mtext[MSG_SIZE];
         } Buffer;
 };
 
