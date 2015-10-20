@@ -8,17 +8,50 @@
 #include <sstream>
 // Config local
 #define QUANTUM 10
-/*
-    Isso pode ser encapsulado em uma classe. Mas por hora, não.
-*/
-std::vector<int> Processos;
-pthread_mutex_t mutex;
-pthread_t escalonator;
-bool Escalonator_Alive;
-/*
+/* Dados para gerenciar o escalonador
+
 
 */
 
+std::vector<int> Processos; //Pid de cada processo
+
+pthread_mutex_t mutex;      //Essa mutexé a região critica do escalonador
+    /*
+        Em essencia ela e so para evitar que um processo seja adcionado enquanto deu o quantum do escalonador
+        e ele esta escalonando
+    */
+pthread_t escalonator;  //Apenas a thread, nao vai precisar de vc mexer com ela
+
+bool Escalonator_Alive; //Defina como false e a thread do escalonador morre.
+
+
+/*
+    Stephani:
+        O escalonador é a função a baixo escalonador_proc
+
+        Ela roda de forma paralela ao main, então tome cuidado com uma coisa
+        std::vector<int> Processos
+        Isso é global e compartilhado com a main, então sempre que for usar a lista
+        de processos <adcionar ou remover> lembre-se de não tirar da seção critica.
+        Eu ja coloquei na hora de adcionar e processar, mas fica de olho :V
+        Logo após:
+        if (Processos.size() > 0){
+            é onde vai ser o escalonador...
+
+        depois de:
+         if (!Escalonator_Alive){
+
+         quer dizer que foi dado o sinal que o escalonador deve encerrar, ai vc tem que colocar para matar todos os
+         processos filhos (se existir)
+
+         Em:
+                Add processo;
+                std::string name = Task_list[i].GetFileName();
+        é uma area comentada que eu coloqui pra vc fazer fok etc e adcionar o processo.
+        eu tb ja coloquei ela como critica c:
+
+
+*/
 void *escalonador_proc(void *param)
 {
     //Aqui os processos serão escalonados de forma paralela!!!1!!!!11
@@ -92,7 +125,9 @@ int main(){
 					char fname[100];
 					delay = (msg[2]-1)*60 + (msg[3]-1);
 					amount = msg[4]-1;
-					//i=5 because the filename starts in [5]
+					/*
+                        i=5 because the filename starts in [5]
+					*/
 					int i;
 					for (i=5;msg[i] != 0;i++){
 						fname[i-5] = msg[i];
