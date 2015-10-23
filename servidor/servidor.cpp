@@ -4,10 +4,14 @@
 #include <string.h>
 #include <pthread.h>
 #include <sys/time.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <sys/ipc.h>
 #include <vector>
 #include <sstream>
+#include <algorithm>
 // Config local
-#define QUANTUM 10
+#define QUANTUM 1
 /* Dados para gerenciar o escalonador
 
 
@@ -58,15 +62,56 @@ void *escalonador_proc(void *param)
     std::cout << "[Server]Hey i am the thread [2] and i am the escalonator.\n";
     struct timeval Quantum, auxT;
     int LastOnQuantum = -1;
+    int ProcessPointer = -1;
     gettimeofday(&Quantum, NULL);
     while (1){
         gettimeofday(&auxT, NULL);
         unsigned int mtime = (int) (1000 * (auxT.tv_sec - Quantum.tv_sec) + (auxT.tv_usec - Quantum.tv_usec) / 1000);
         if (mtime >= QUANTUM*1000){
             pthread_mutex_lock(&mutex);
+
                 //Manipulando processos...
                 if (Processos.size() > 0){
                     //Escalona
+
+                    ProcessPointer++;
+                    if (ProcessPointer >= Processos.size()){
+                        ProcessPointer = 0;
+                    }
+                    std::cout << "[Info]Quantum {"<<ProcessPointer<<"}\n";
+                    int status;
+                    pid_t result = waitpid(Processos[ProcessPointer], &status, WNOHANG);
+                    if (result != 0){
+                        //Processo terminou
+                        int deadProcess = Processos[ProcessPointer];
+                        std::vector<int>::iterator position = std::find(Processos.begin(), Processos.end(),deadProcess);
+                        if (position != Processos.end())
+                        {
+                            Processos.erase(position);
+                            int status_child;
+                            wait(&status);
+                            std::cout << "[Info]Process " << deadProcess << " sucefully closed with status "<< status_child << "\n";
+                        }else{
+                            std::cout << "[Error]Cannot remove " << Processos[ProcessPointer] <<"\n";
+                        }
+
+                    }else{
+                        /*
+                            Processo rodando.
+                        */
+                        if (LastOnQuantum != -1){
+                            std::cout << "[SIGSTOP] > " << Processos[LastOnQuantum] <<"\n";
+                            kill(Processos[LastOnQuantum], SIGSTOP);
+                        }
+                        LastOnQuantum = ProcessPointer;
+                        std::cout << "[SIGCONT] > " << Processos[ProcessPointer] <<"\n";
+                        kill(Processos[ProcessPointer], SIGCONT);
+
+
+                    }
+
+
+
                 }
             pthread_mutex_unlock(&mutex);
             gettimeofday(&Quantum, NULL);
@@ -133,16 +178,23 @@ int main(){
 						fname[i-5] = msg[i];
 					}
 					fname[i-5] = 0;
-					Task localJob = Task(delay,amount,fname);
-					Task_list.emplace_back(localJob);
-					/*
-                        Todo: ela quer que exiba assim:
-                        Executando <programa> as horario 1, horario 2, horario 3...
-					*/
-					std::stringstream output;
-					output << "Job id is ["<<localJob.getId()<<"] " << fname << " will run "<< amount<< " times every "<< delay<< " seconds.";
-					std::cout <<output.str();
-					SendMessage.Send(output.str());
+					FILE*fp = fopen(fname,"rb");
+					if (fp != NULL){
+                        fclose(fp);
+                        Task localJob = Task(delay,amount,fname);
+                        Task_list.emplace_back(localJob);
+                        /*
+                            Todo: ela quer que exiba assim:
+                            Executando <programa> as horario 1, horario 2, horario 3...
+                        */
+                        std::stringstream output;
+                        output << "Job id is ["<<localJob.getId()<<"] " << fname << " will run "<< amount<< " times every "<< delay<< " seconds.";
+                        std::cout <<output.str();
+                        SendMessage.Send(output.str());
+					}else{
+					    std::cout << "[Server]Error, file "<< fname << " not found.\n";
+                        SendMessage.Send("[Error]File not found.");
+					}
 				}else if (msg[1] == 'r'){
                     bool removed = false;
                     for(int i=0;i<Task_list.size();i++)
@@ -191,13 +243,32 @@ int main(){
                 if (Task_list[i].isAlive()){
                     Task_list[i].Update();
                     if (Task_list[i].RunTrigger()){
-                        pthread_mutex_lock(&mutex);
-                        /*
-                            Add processo;
-                            std::string name = Task_list[i].GetFileName();
-                        */
-                        pthread_mutex_unlock(&mutex);
+                        std::string name = Task_list[i].GetFileName();
+                        FILE*fp = fopen(name.c_str(),"rb");
+                        if (fp != NULL){
+                            fclose(fp);
+                            int pid = fork();
+                            if (pid == -1) {
+                                std::cout << "Tretas aconteceram!\n";
+                                return 1;
+                            }else if (pid == 0) {
+                                //Execução
+                                char *params[] = {""};
+                                if ( execv(name.c_str(),params) < 0 ){
+                                    //Funfou :V
+                                }
+                            }
+                            //Para o processo recem criado.
+                            kill(pid, SIGSTOP);
+                            pthread_mutex_lock(&mutex);
 
+                            std::cout << "[Server]Created process " << pid <<"\n";
+                            Processos.emplace_back(pid);
+
+                            pthread_mutex_unlock(&mutex);
+                        }else{
+                            std::cout << "[Server]Error, file "<< name << " not found.\n";
+                        }
                     }
                 }
             }
