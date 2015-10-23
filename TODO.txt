@@ -1,1 +1,6 @@
-Falta a gerencia de processos e o escalonador
+O projeto consiste em um programa no qual tem um timer hh:mm:ss e a cada X intervalo de tempo ele deve executar outro programa
+o programa deve ser executado utilizando fork e chamadas de sistema unix
+
+para chamar os comandos a esse programa deve ser usado fila de mensagens unix
+
+em caso de 2 ou mais programas rodando no mesmo instante, deve-se implementar um escalonador... era round robin?

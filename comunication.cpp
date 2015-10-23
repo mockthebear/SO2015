@@ -89,8 +89,8 @@ bool MessageQueue::Receive(char *message,bool wait){
         return false;
     }
     int readSize=-1;
-    readSize = msgrcv(MessageQueueId, &Buffer, MSG_SIZE, 1,(wait == true ? 0 : IPC_NOWAIT));
-    if (readSize < 0){
+
+    if (readSize = msgrcv(MessageQueueId, &Buffer, MSG_SIZE, 1,(wait ? 0 : IPC_NOWAIT) ) < 0){
         return false;
     }
     LastReadSize = readSize;
