@@ -23,6 +23,7 @@ MessageQueue::MessageQueue(QueueType type_arg,int key,int flags){
     }
 
 }
+
 MessageQueue::~MessageQueue(){}
 
 void MessageQueue::Close(){
@@ -40,17 +41,18 @@ bool MessageQueue::Send(std::string str){
     const char *c = str.c_str();
     return Send(c,str.size()+1);
 }
+
 bool MessageQueue::Send(const char *message,int size){
     return Send((char*)message,size);
 }
 
 bool MessageQueue::Send(char *message,int size){
     if (!isSender()){
-        std::cout << "[Error] i am not sender!\n";
+        std::cout << "[Error] I am not sender!\n";
         return false;
     }
     if (size > MSG_SIZE){
-        std::cout << "[Error] message too big\n";
+        std::cout << "[Error] Message too big\n";
         return false;
     }
     //Copy
@@ -81,11 +83,11 @@ bool MessageQueue::Receive(std::string &str,bool wait){
 
 bool MessageQueue::Receive(char *message,bool wait){
     if (!isWorking()){
-        std::cout << "[Error] not working!\n";
+        std::cout << "[Error] Not working!\n";
         return false;
     }
     if (!isReceiver()){
-        std::cout << "[Error] i am not receiver! ["<<type<<"]\n";
+        std::cout << "[Error] I am not receiver! ["<<type<<"]\n";
         return false;
     }
     int readSize=-1;
