@@ -12,8 +12,8 @@
 #include <algorithm>
 #include <unistd.h>
 
-// Config local
-#define QUANTUM 1
+// Configuracao local
+#define QUANTUM 10
 
 std::vector<int> Processos; //Pid de cada processo
 
@@ -21,10 +21,9 @@ pthread_mutex_t mutex;  //Essa mutex é a região critica do escalonador
                         //Evita que um processo seja adicionado enquanto deu o quantum do escalonador e ele esta escalonando
 pthread_t escalonator;
 
-bool Escalonator_Alive; //Defina como false e a thread do escalonador morre.
+bool Escalonator_Alive; //Se false = a thread do escalonador morre
 
 void *escalonador_proc(void *param){
-    //Aqui os processos serão escalonados de forma paralela!
     std::cout << "[Server]Hey I am the thread [2] and I am the escalonator.\n";
     
     struct timeval Quantum, auxT;
@@ -35,13 +34,13 @@ void *escalonador_proc(void *param){
     while (1){
         gettimeofday(&auxT, NULL);
         unsigned int mtime = (int) (1000 * (auxT.tv_sec - Quantum.tv_sec) + (auxT.tv_usec - Quantum.tv_usec) / 1000);
+        
         if (mtime >= QUANTUM*1000){
             pthread_mutex_lock(&mutex);
 
                 //Manipulando processos...
                 if (Processos.size() > 0){
                     //Escalona
-
                     ProcessPointer++;
                     if (ProcessPointer >= Processos.size()){
                         ProcessPointer = 0;
@@ -62,11 +61,8 @@ void *escalonador_proc(void *param){
                         }else{
                             std::cout << "[Error]Cannot remove " << Processos[ProcessPointer] <<"\n";
                         }
-
                     }else{
-                        /*
-                            Processo rodando.
-                        */
+                        //Processo rodando.
                         if (LastOnQuantum != -1){
                             std::cout << "[SIGSTOP] > " << Processos[LastOnQuantum] <<"\n";
                             kill(Processos[LastOnQuantum], SIGSTOP);
@@ -118,26 +114,22 @@ int main(){
                 //Comando
                 if (msg[1] == 's'){
                     std::cout << "[Server][1]Got signal to close\n";
-                    SendMessage.Send("Closing as you asked");
+                    SendMessage.Send("Closing, as you asked...");
                     pthread_mutex_lock(&mutex);
-                    /*
-                        Just to make sure that the thread will wait
-                    */
+                    // The thread will wait
                     Escalonator_Alive = false;
                     pthread_mutex_unlock(&mutex);
-                    /*
-                        Wait here, then close
-                    */
+                    // Wait then close
                     pthread_join(escalonator, NULL);
                     break;
                 }else if (msg[1] == 'e'){
 					int delay = 0;
 					int amount = 1;
 					char fname[100];
-					delay = (msg[2]-1)*60 + (msg[3]-1);
+					delay = (msg[2]-1)*3600 + (msg[3]-1)*60;
 					amount = msg[4]-1;
 					
-                    // i=5 because the filename starts in [5]
+                    // i=5 -> the filename starts in [5]
 					int i;
 					for (i=5;msg[i] != 0;i++){
 						fname[i-5] = msg[i];
@@ -150,17 +142,13 @@ int main(){
                         fclose(fp);
                         Task localJob = Task(delay,amount,fname);
                         Task_list.emplace_back(localJob);
-                        /*
-                            Todo: ela quer que exiba assim:
-                            Executando <programa> as horario 1, horario 2, horario 3...
-                        */
                         std::stringstream output;
-                        output << "Job id is ["<<localJob.getId()<<"] " << fname << " will run "<< amount<< " times every "<< delay<< " seconds.";
+                        output << "Job id is ["<<localJob.getId()<<"] " << fname << " will run "<< amount << " times every "<< delay << " seconds.\n";
                         std::cout <<output.str();
                         SendMessage.Send(output.str());
 					}else{
 					    std::cout << "[Server]Error, file "<< fname << " not found.\n";
-                        SendMessage.Send("[Error]File not found.");
+                        SendMessage.Send("[Error]File not found.\n");
 					}
 				}else if (msg[1] == 'r'){
                     bool removed = false;
@@ -175,9 +163,9 @@ int main(){
                     }
                     
                     if (removed){
-                        SendMessage.Send("Job removed.");
+                        SendMessage.Send("Job removed.\n");
                     }else{
-                        SendMessage.Send("There is no job with such id.");
+                        SendMessage.Send("There is no job with such id.\n");
                     }
 				}else if (msg[1] == 'l'){
                     SendMessage.Send("[ID]\t[file]\t[delay]\t[times]\t[incr]\n");

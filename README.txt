@@ -9,4 +9,6 @@ shutdown_postergado.cpp contem o processo utilizado para desativar o servidor de
 comunication.cpp e comunication.hpp contem a biblioteca utilizada para a comunicação entre o servidor e os processos
 task.cpp e task.hpp contem a biblioteca utilizada para o controle de tarefas no servidor
 
-Cada código-fonte é compilado individualmente utilizando makefiles próprios.
+Obs.1: cada código-fonte é compilado individualmente utilizando makefiles próprios.
+
+Obs.2: também está incluso o arquivo teste.cpp que, após compilado, foi utilizado para fazer testes no gerente de processos.

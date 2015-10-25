@@ -25,9 +25,9 @@ int main(int argc, char *argv[]){
     
     msg[0] = 1; //Command
     msg[1] = 'e'; //Shutdown
-    msg[2] = (HH+1); //end
-    msg[3] = (MM+1); //end
-    msg[4] = (amount+1); //end
+    msg[2] = (HH+1); //hora
+    msg[3] = (MM+1); //min
+    msg[4] = (amount+1); //vezes
     strcpy(&msg[5],argv[3]);
 	msg[6+strlen(argv[3])] = 0;
     

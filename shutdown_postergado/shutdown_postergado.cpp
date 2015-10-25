@@ -25,14 +25,5 @@ int main(){
         std::cout << "[Info]" << Message << "]\n";
     }
 	
-    //Better not close because CRASHES!!!
-	/*
-    SendMessage.Close();
-    RecvMessage.Close();
-	actually, the main reason its because you are closing the
-	message queue.
-	should be open because the server are still using
-	*/
-
     return 0;
 }
